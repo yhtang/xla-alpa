@@ -2313,6 +2313,12 @@ std::vector<ReplicaGroup> SpmdPartitioningVisitor::CreateReplicaGroups(
 }
 
 Status SpmdPartitioningVisitor::DefaultAction(HloInstruction* hlo) {
+  // Added by Alpa
+  if (hlo->IsCustomCall("pipeline_marker") ||
+      hlo->IsCustomCall("__builtin$CrossMeshAllReduce")) {
+    return HandleElementwise(hlo);
+  }
+
   if (hlo->HasSideEffect() && !hlo->sharding().HasUniqueDevice()) {
     return Unimplemented("Side-effect ops cannot be replicated: %s",
                          hlo->ToString());
