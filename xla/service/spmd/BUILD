@@ -166,6 +166,8 @@ cc_library(
         "//xla/hlo/ir:hlo",
         "//xla/service:hlo_pass",
         "@com_google_absl//absl/memory",
+        # Added by Alpa
+        ":auto_sharding",
     ],
 )
 
@@ -244,3 +246,107 @@ xla_cc_test(
         "@tsl//tsl/platform:test",
     ],
 )
+
+# Added by Alpa
+cc_library(
+    name = "auto_sharding",
+    srcs = ["auto_sharding.cc", "auto_sharding_util.cc", "auto_sharding_dot_handler.cc"],
+    hdrs = ["auto_sharding.h", "auto_sharding_strategy.h", "auto_sharding_util.h"],
+    deps = [
+        "//xla:shape_util",
+        "//xla/hlo/ir:hlo",
+        "//xla/hlo/utils:hlo_live_range",
+        "//xla/hlo/utils:hlo_sharding_util",
+        "//xla/service:dump",
+        "//xla/service:hlo_creation_utils",
+        "//xla/service:hlo_memory_scheduler",
+        "//xla/service:hlo_pass",
+        "//xla/service:pass_context",
+        "@pybind11",
+    ],
+)
+
+cc_library(
+    name = "redundant_slice_eliminator",
+    srcs = ["redundant_slice_eliminator.cc"],
+    hdrs = ["redundant_slice_eliminator.h"],
+    deps = [
+        "//xla:shape_util",
+        "//xla/hlo/ir:hlo",
+        "//xla/service:hlo_dce",
+        "//xla/service:hlo_pass",
+    ],
+)
+
+cc_library(
+    name = "grad_acc_rewrite",
+    srcs = ["grad_acc_rewrite.cc"],
+    hdrs = ["grad_acc_rewrite.h"],
+    deps = [
+        "//xla:shape_util",
+        "//xla/hlo/ir:hlo",
+        "//xla/service:hlo_pass",
+        "//xla/service:pass_context",
+        "//xla/service/spmd:spmd_partitioner",
+    ],
+)
+
+cc_library(
+    name = "slice_auto_sharded_stages",
+    srcs = ["slice_auto_sharded_stages.cc"],
+    hdrs = ["slice_auto_sharded_stages.h"],
+    deps = [
+        ":auto_sharding",
+        "//xla:shape_util",
+        "//xla/hlo/ir:hlo",
+        "//xla/service:hlo_pass",
+        "@pybind11",
+    ],
+)
+
+cc_library(
+    name = "alpa_compiler",
+    srcs = ["alpa_compiler.cc"],
+    hdrs = ["alpa_compiler.h"],
+    deps = [
+        ":auto_sharding",
+        ":redundant_slice_eliminator",
+        ":grad_acc_rewrite",
+        ":slice_auto_sharded_stages",
+        ":stateful_rng_spmd_partitioner",
+        # Copied from gpu_compiler
+        "//xla/hlo/transforms:hlo_constant_splitter",
+        "//xla/pjrt:pjrt_client",
+        "//xla/service:algebraic_simplifier",
+        "//xla/service:all_reduce_reassociate",
+        "//xla/service:call_inliner",
+        "//xla/service:conditional_canonicalizer",
+        "//xla/service:conditional_simplifier",
+        "//xla/service:dot_decomposer",
+        "//xla/service:dot_merger",
+        "//xla/service:dump",
+        "//xla/service:gather_expander",
+        "//xla/service:gather_simplifier",
+        "//xla/service:hlo_constant_folding",
+        "//xla/service:hlo_cse",
+        "//xla/service:hlo_dce",
+        "//xla/service:hlo_pass",
+        "//xla/service:hlo_pass_pipeline",
+        "//xla/service:hlo_verifier",
+        "//xla/service:reshape_mover",
+        "//xla/service:scatter_expander",
+        "//xla/service:scatter_simplifier",
+        "//xla/service:sharding_propagation",
+        "//xla/service:sharding_remover",
+        "//xla/service:sort_simplifier",
+        "//xla/service:transpose_folding",
+        "//xla/service:tuple_simplifier",
+        "//xla/service:while_loop_constant_sinking",
+        "//xla/service:while_loop_simplifier",
+        "//xla/service:zero_sized_hlo_elimination",
+        "//xla/service/gpu:gpu_conv_rewriter",
+        "//xla/service/gpu:gpu_shape_verifier",
+        "//xla/service/gpu:matmul_utils",
+    ]
+)
+# End Added by Alpa

@@ -7111,3 +7111,21 @@ tf_proto_library(
     cc_api_version = 2,
     make_default_target_header_only = True,
 )
+
+# Added by Alpa.
+cc_library(
+    name = "pass_context",
+    srcs = [
+        "pass_context.cc",
+    ],
+    hdrs = [
+        "pass_context.h",
+    ],
+    deps = [
+        "//xla:types",
+        "//xla:util",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/types:any",
+        "@pybind11",
+    ],
+)
