@@ -25,27 +25,16 @@ StatusOr<bool> OptimizationBarrierExpander::Run(
        module->MakeNonfusionComputations(execution_threads)) {
     bool modified = false;
     for (HloInstruction* inst : computation->instructions()) {
-      if (inst->opcode() == HloOpcode::kOptimizationBarrier) {
+      // Modified by Alpa: add pipeline marker option
+      if (inst->IsCustomCall("pipeline_marker") || inst->opcode() == HloOpcode::kOptimizationBarrier) {
         barriers.push_back(inst);
         modified = true;
       }
     }
-
-    if (modified && module->has_schedule()) {
-      const auto& sequences = module->schedule().sequences();
-      auto it = sequences.find(computation->unique_id());
-      if (it != sequences.end()) {
-        std::vector<HloInstruction*> sequence;
-        sequence.reserve(it->second.instructions().size());
-        absl::c_copy_if(it->second.instructions(), std::back_inserter(sequence),
-                        [](HloInstruction* inst) {
-                          return inst->opcode() !=
-                                 HloOpcode::kOptimizationBarrier;
-                        });
-        module->schedule().set_sequence(computation, sequence);
-      }
-    }
   }
+
+  // Modified by Alpa: remove the module->has_schedule() branch;
+  // @yhtang: may not be needed anymore
 
   for (HloInstruction* inst : barriers) {
     HloInstruction* arg = inst->mutable_operand(0);

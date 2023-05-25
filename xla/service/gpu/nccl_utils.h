@@ -47,6 +47,7 @@ StatusOr<std::pair<ncclDataType_t, int>> ToNcclDataTypeAndCountMultiplier(
     PrimitiveType element_type, Thunk::Kind reduction_op);
 
 bool IsGlobalNcclConfig();
+bool IsNcclLaunchModeParallel();
 
 Status ToStatus(ncclResult_t s, const char* file, int64_t line,
                 const char* expr);
@@ -119,6 +120,8 @@ TSL_LIB_GTL_DEFINE_INT_TYPE(OpId, int64_t);
 
 struct NcclComm : public Lockable<ncclComm_t> {
   explicit NcclComm(ncclComm_t comm) : Lockable(comm) {}
+  // Added by Alpa
+  explicit NcclComm() : Lockable(nullptr) {}
 };
 
 StatusOr<NcclComm::Lock> AcquireNcclComm(

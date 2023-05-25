@@ -39,6 +39,9 @@ limitations under the License.
 #include "xla/xla_data.pb.h"
 #include "tsl/platform/errors.h"
 
+// Added by Alpa
+#include "xla/service/spmd/grad_acc_rewrite.h"
+
 namespace xla {
 namespace {
 
@@ -85,6 +88,12 @@ Status CombineAllReduces(absl::Span<HloInstruction* const> to_combine) {
       Cast<HloAllReduceInstruction>(to_combine.front())
           ->use_global_device_ids()));
 
+  // Added by Alpa
+  if (to_combine.front()->metadata().op_name() == spmd::kSkippableAllReduce) {
+    combined->set_metadata_op_name(spmd::kSkippableAllReduce);
+  }
+  // End of Alpa's addition
+
   // We have to propagate the sharding manually because Domain instructions are
   // not guaranteed to preserve it for side effecting instructions.
   combined->set_sharding(
@@ -107,6 +116,11 @@ AllReduceCombiner::AllReduceCombiner(int64_t combine_threshold_in_bytes,
                                      int64_t combine_threshold_count)
     : combine_threshold_in_bytes_(combine_threshold_in_bytes),
       combine_threshold_count_(combine_threshold_count) {}
+
+// Added by Alpa. Add a new boolean field to the original AllReduceKey.
+// This field indicates whether the all-reduce is a skippable
+// all-reduce for gradient accumulation.
+using AllReduceKeyWithSkip = std::tuple<AllReduceKey, bool>;
 
 StatusOr<bool> AllReduceCombiner::Run(
     HloModule* module,

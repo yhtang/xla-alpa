@@ -362,6 +362,8 @@ cc_library(
         "@tsl//tsl/platform:statusor",
         "@tsl//tsl/profiler/lib:connected_traceme",
         "@tsl//tsl/profiler/lib:traceme",
+        # Added by Alpa
+        "//tensorflow/compiler/xla/service:pass_context",
     ],
 )
 

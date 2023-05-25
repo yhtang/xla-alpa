@@ -168,6 +168,13 @@ bool IsPerIdOffset(const HloInstruction* offset, int64_t shard_size,
     return IsPerIdOffset(offset->operand(1 - const_operand),
                          shard_size / *multiplier, map_id, group_size, ar);
   }
+
+  // Added by Alpa
+  if (offset->opcode() == HloOpcode::kSubtract) {
+    // TODO(lmzheng): make the condition stronger.
+    return IsTableLookup(offset->operand(0)) && IsTableLookup(offset->operand(1));
+  }
+
   if (shard_size == 1 && iota_group) {
     bool id_mapping_is_identity = true;
     for (int64_t id = 0; id < group_size; ++id) {

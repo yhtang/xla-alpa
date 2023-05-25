@@ -15,8 +15,11 @@ limitations under the License.
 
 #include "xla/service/gpu/gpu_compiler.h"
 
+#include <stdlib.h>
+
 #include <algorithm>
 #include <any>
+#include <atomic>
 #include <cstdint>
 #include <functional>
 #include <iterator>
@@ -58,6 +61,7 @@ limitations under the License.
 #include "xla/service/all_reduce_folder.h"
 #include "xla/service/all_reduce_promotion.h"
 #include "xla/service/all_reduce_reassociate.h"
+#include "xla/service/all_to_all_decomposer.h"
 #include "xla/service/async_collective_creator.h"
 #include "xla/service/batchnorm_expander.h"
 #include "xla/service/bitcast_dtypes_expander.h"
@@ -196,6 +200,12 @@ limitations under the License.
 #elif TENSORFLOW_USE_ROCM
 #include "rocm/rocm_config.h"
 #endif  // GOOGLE_CUDA || TENSORFLOW_USE_ROCM
+
+// Added by Alpa
+#include "xla/service/gpu/done_event_insertion.h"
+#include "xla/service/pass_context.h"
+#include "xla/service/spmd/grad_acc_rewrite.h"
+#include "xla/service/spmd/redundant_slice_eliminator.h"
 
 namespace xla {
 namespace gpu {
@@ -410,6 +420,10 @@ Status GpuCompiler::OptimizeHloModule(HloModule* hlo_module,
     spmd_pipeline.AddPass<spmd::StatefulRngSpmdPartitioner>(
         num_partitions, hlo_module->config().replica_count());
     spmd_pipeline.AddPass<CollectivePermuteMotion>();
+    // Added by Alpa
+    spmd_pipeline.AddPass<spmd::RedundantSliceEliminator>();
+    spmd_pipeline.AddPass<AllReduceReassociate>();
+    spmd_pipeline.AddPass<spmd::GradAccRewrite>();
     TF_RETURN_IF_ERROR(spmd_pipeline.Run(hlo_module).status());
   } else {
     HloPassPipeline sharding_removal_pipeline("sharding-removal");
@@ -425,6 +439,8 @@ Status GpuCompiler::OptimizeHloModule(HloModule* hlo_module,
     pipeline.AddPass<TopKSplitter>();
     pipeline.AddPass<TopkSpecializer>();
     pipeline.AddPass<TopkDecomposer>();
+    // Added by Alpa
+    pipeline.AddPass<AllToAllDecomposer>();
 
     HloPredicate upcaster_filter = [&](const HloInstruction* instr) {
       return !stream_exec->GetDeviceDescription()
@@ -542,7 +558,8 @@ Status GpuCompiler::OptimizeHloModule(HloModule* hlo_module,
       pipeline.AddPass<DotDecomposer>();
       // Only merge "smallish" dots.  This threshold was not set carefully, but
       // so far we know that 1mb is too small.
-      pipeline.AddPass<DotMerger>(/*max_size_to_merge=*/int64_t{16} << 20);
+      // Commented out by Alpa for potential perf regression.
+      // pipeline.AddPass<DotMerger>(/*max_size_to_merge=*/int64_t{16} << 20);
       pipeline.AddPass<SortSimplifier>();
       pipeline.AddPass<TupleSimplifier>();
       pipeline.AddPass<WhileLoopConstantSinking>();
@@ -769,6 +786,10 @@ Status GpuCompiler::OptimizeHloModule(HloModule* hlo_module,
     pipeline.AddPass<HloComputationDeduplicator>(
         /*mark_fusion_duplications=*/true);
 
+  // Added by Alpa
+  if (pass_context::GetBool("done-event::enable", false)) {
+    HloPassPipeline pipeline("done event insertion");
+    pipeline.AddPass<HloDoneInsertion>();
     TF_RETURN_IF_ERROR(pipeline.Run(hlo_module).status());
   }
 

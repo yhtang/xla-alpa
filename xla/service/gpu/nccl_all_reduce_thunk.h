@@ -58,10 +58,36 @@ class NcclAllReduceThunkBase : public NcclAllReduceReduceScatterThunkBase {
   using NcclAllReduceReduceScatterThunkBase::
       NcclAllReduceReduceScatterThunkBase;
 
+  // Added by Alpa
+  void set_module_name(const std::string& module_name) {
+    skip_env_name_ = module_name + "XLA_SKIP_NCCL_COLLECTIVE_IDS";
+  }
+
  protected:
   Status RunAllReduce(const ExecuteParams& params, se::Stream& stream,
                       ncclComm_t comm);
+  std::string skip_env_name_ = "";  // Added by Alpa
 };
+
+// Added by Alpa
+class NcclAllReduceThunk : public NcclAllReduceThunkBase {
+ public:
+  NcclAllReduceThunk(ThunkInfo thunk_info, mlir::lmhlo::AllReduceOp op,
+                     std::vector<Buffer> buffers);
+
+  static const char* GetName() { return "AllReduce"; }
+
+  static bool CanImplement(mlir::lmhlo::AllReduceOp op);
+  static bool IsDegenerate(mlir::lmhlo::AllReduceOp op, int64_t replica_count,
+                           int64_t partition_count);
+  static CollectiveOpGroupMode GetGroupMode(mlir::lmhlo::AllReduceOp op);
+  static constexpr bool IsAsync() { return false; }
+
+ protected:
+  Status RunNcclCollective(const ExecuteParams& params,
+                           ncclComm_t comm) override;
+};
+// Added by Alpa END
 
 class NcclAllReduceStartThunk : public NcclAllReduceThunkBase {
  public:
@@ -111,6 +137,28 @@ class NcclReduceScatterThunkBase : public NcclAllReduceReduceScatterThunkBase {
                           ncclComm_t comm);
 };
 
+// Added by Alpa
+class NcclReduceScatterThunk : public NcclReduceScatterThunkBase {
+ public:
+  NcclReduceScatterThunk(ThunkInfo thunk_info, mlir::lmhlo::ReduceScatterOp op,
+                         std::vector<Buffer> buffers);
+
+  static const char* GetName() { return "ReduceScatter"; }
+
+  // Returns whether the given instruction can be lowered to a nccl
+  // reduce-scatter call.
+  static bool CanImplement(mlir::lmhlo::ReduceScatterOp op);
+  static bool IsDegenerate(mlir::lmhlo::ReduceScatterOp op,
+                           int64_t replica_count, int64_t partition_count);
+  static CollectiveOpGroupMode GetGroupMode(mlir::lmhlo::ReduceScatterOp op);
+  static constexpr bool IsAsync() { return false; }
+
+ protected:
+  Status RunNcclCollective(const ExecuteParams& params,
+                           ncclComm_t comm) override;
+};
+// Added by Alpa END
+
 class NcclReduceScatterStartThunk : public NcclReduceScatterThunkBase {
  public:
   NcclReduceScatterStartThunk(ThunkInfo thunk_info,
@@ -151,9 +199,34 @@ Status RunAllReduce(ReductionKind reduction_kind,
                     std::vector<DeviceBufferPair>& buffers, se::Stream& stream,
                     ncclComm_t comm);
 
+// Added by Alpa
+Status RunAllReduce(const NcclAllReduceConfig& config,
+                    std::vector<DeviceBufferPair>& buffers, se::Stream& stream,
+                    ncclComm_t comm, const std::string& env_name);
+
 Status RunReduceScatter(ReductionKind reduction_kind,
                         std::vector<DeviceBufferPair>& buffers,
                         se::Stream& stream, ncclComm_t comm);
+
+// Added by Alpa
+class CrossMeshNcclAllReduceThunk : public Thunk {
+ public:
+  using Buffer = NcclCollectiveThunk::Buffer;
+
+  explicit CrossMeshNcclAllReduceThunk(ThunkInfo thunk_info,
+                                       std::vector<Buffer> buffers,
+                                       ReductionKind reduction_kind,
+                                       xla::PrimitiveType op_type,
+                                       std::string key);
+
+  Status ExecuteOnStream(const ExecuteParams& params) override;
+
+ private:
+  const NcclAllReduceConfig config_;
+  const std::vector<Buffer> buffers_;
+  bool first_call_to_execute_ = true;
+  std::string key_;
+};
 
 }  // namespace gpu
 }  // namespace xla
