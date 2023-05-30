@@ -1,5 +1,5 @@
-#ifndef TENSORFLOW_COMPILER_XLA_SERVICE_PASS_CONTEXT_H_
-#define TENSORFLOW_COMPILER_XLA_SERVICE_PASS_CONTEXT_H_
+#ifndef XLA_SERVICE_PASS_CONTEXT_H_
+#define XLA_SERVICE_PASS_CONTEXT_H_
 
 #include <string>
 #include <utility>
@@ -38,4 +38,4 @@ pybind11::object GetPyObject(const std::string& name);
 }  // namespace pass_context
 }  // namespace xla
 
-#endif  // TENSORFLOW_COMPILER_XLA_SERVICE_PASS_CONTEXT_H_
+#endif  // XLA_SERVICE_PASS_CONTEXT_H_

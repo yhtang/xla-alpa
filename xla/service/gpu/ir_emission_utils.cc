@@ -666,8 +666,10 @@ std::optional<Vector3> FindTiledTranspose(const HloInstruction& instr,
 
   if (std::optional<Vector3> tr = ShapeUtil::GetNormalizedTransposeShape(
           instr.operand(0)->shape(), instr.shape(), Vector3{0, 2, 1})) {
-    if (tr->at(1) >= kMinDimensionToTransposeTiled &&
-        (tr->at(2) >= kMinDimensionToTransposeTiled ||
+    if ((tr->at(1) >= kMinDimensionToTransposeTiled &&
+         tr->at(2) >= kMinDimensionToTransposeTiled) ||
+        (tr->at(1) >= kMinDimensionToTransposeTiled2 &&
+         tr->at(2) >= kMinDimensionToTransposeTiled2 &&
          tr->at(1) * tr->at(2) >= kMinTotalDimensionsToTransposeTiled)) {
       permutation = Vector3{0, 2, 1};
       return tr;
@@ -675,8 +677,10 @@ std::optional<Vector3> FindTiledTranspose(const HloInstruction& instr,
   }
   if (std::optional<Vector3> tr = ShapeUtil::GetNormalizedTransposeShape(
           instr.operand(0)->shape(), instr.shape(), Vector3{2, 1, 0})) {
-    if (tr->at(0) >= kMinDimensionToTransposeTiled &&
-        (tr->at(2) >= kMinDimensionToTransposeTiled ||
+    if ((tr->at(0) >= kMinDimensionToTransposeTiled &&
+         tr->at(2) >= kMinDimensionToTransposeTiled) ||
+        (tr->at(0) >= kMinDimensionToTransposeTiled2 &&
+         tr->at(2) >= kMinDimensionToTransposeTiled2 &&
          tr->at(0) * tr->at(2) >= kMinTotalDimensionsToTransposeTiled)) {
       permutation = Vector3{2, 1, 0};
       return tr;
@@ -696,8 +700,10 @@ std::optional<Vector3> FindTiledLogicalTranspose(const HloInstruction& instr,
   if (std::optional<Vector3> tr = ShapeUtil::GetNormalizedLogicalTransposeShape(
           instr.operand(0)->shape(), instr.shape(), instr.dimensions(),
           Vector3{0, 2, 1})) {
-    if (tr->at(1) >= kMinDimensionToTransposeTiled &&
-        (tr->at(2) >= kMinDimensionToTransposeTiled ||
+    if ((tr->at(1) >= kMinDimensionToTransposeTiled &&
+         tr->at(2) >= kMinDimensionToTransposeTiled) ||
+        (tr->at(1) >= kMinDimensionToTransposeTiled2 &&
+         tr->at(2) >= kMinDimensionToTransposeTiled2 &&
          tr->at(1) * tr->at(2) >= kMinTotalDimensionsToTransposeTiled)) {
       permutation = Vector3{0, 2, 1};
       return tr;
@@ -706,8 +712,10 @@ std::optional<Vector3> FindTiledLogicalTranspose(const HloInstruction& instr,
   if (std::optional<Vector3> tr = ShapeUtil::GetNormalizedLogicalTransposeShape(
           instr.operand(0)->shape(), instr.shape(), instr.dimensions(),
           Vector3{2, 1, 0})) {
-    if (tr->at(0) >= kMinDimensionToTransposeTiled &&
-        (tr->at(2) >= kMinDimensionToTransposeTiled ||
+    if ((tr->at(0) >= kMinDimensionToTransposeTiled &&
+         tr->at(2) >= kMinDimensionToTransposeTiled) ||
+        (tr->at(0) >= kMinDimensionToTransposeTiled2 &&
+         tr->at(2) >= kMinDimensionToTransposeTiled2 &&
          tr->at(0) * tr->at(2) >= kMinTotalDimensionsToTransposeTiled)) {
       permutation = Vector3{2, 1, 0};
       return tr;

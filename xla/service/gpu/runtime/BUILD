@@ -221,6 +221,7 @@ xla_cc_test(
         ":topk_kernel",
         "//xla:xla_data_proto_cc",
         "//xla/stream_executor/gpu:gpu_types_header",
+        "//xla/stream_executor/host:host_platform",
         "@com_google_absl//absl/random",
         "@com_google_absl//absl/strings",
         "@eigen_archive//:eigen3",
@@ -380,6 +381,7 @@ cc_library(
     srcs = ["kernel_launch.cc"],
     hdrs = ["kernel_launch.h"],
     deps = [
+        ":concurrent_region",
         ":support",
         "//xla:types",
         "//xla/runtime:custom_call",
